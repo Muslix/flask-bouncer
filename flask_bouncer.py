@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from functools import wraps
 
-from flask import request, g, current_app, _app_ctx_stack as stack
+from flask import request, g, current_app
 from werkzeug.local import LocalProxy
 from werkzeug.exceptions import Forbidden
 from bouncer import Ability
@@ -96,7 +96,7 @@ class Bouncer(object):
         if self.app is not None:
             return self.app
 
-        ctx = stack.top
+        ctx = g
 
         if ctx is not None:
             return ctx.app

@@ -1,3 +1,4 @@
-nose
+pytest
 flask
 flask-classy>=0.6.10
+tox

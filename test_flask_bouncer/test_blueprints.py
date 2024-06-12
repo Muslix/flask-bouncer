@@ -1,8 +1,8 @@
 from flask import Flask, Blueprint
 from flask_bouncer import Bouncer, ensure, requires
 from bouncer.constants import *
-from nose.tools import *
-from .models import Article, TopSecretFile, User
+import pytest
+from .models import Article, User
 from .helpers import user_set
 
 def test_blueprints():
@@ -28,4 +28,4 @@ def test_blueprints():
     jonathan = User(name='jonathan', admin=False)
     with user_set(app, jonathan):
         resp = client.get('/articles')
-        eq_(b"A bunch of articles", resp.data)
+        assert b"A bunch of articles" == resp.data
