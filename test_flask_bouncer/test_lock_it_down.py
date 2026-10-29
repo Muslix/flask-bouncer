@@ -1,7 +1,6 @@
 import pytest
-from flask import Flask
+from flask import Flask, request
 from flask_bouncer import Bouncer, requires, skip_authorization, ensure
-from werkzeug.exceptions import Forbidden
 from bouncer.constants import *
 from .models import Article, User
 from .helpers import user_set
@@ -15,7 +14,7 @@ def test_lock_it_down_raise_exception():
     def define_authorization(user, they):
         they.can('browse', Article)
 
-    # Non decorated route -- should raise a Forbidden
+    # Non decorated route -- should be Forbidden
     @app.route("/articles")
     def articles_index():
         return "A bunch of articles"
@@ -24,8 +23,48 @@ def test_lock_it_down_raise_exception():
 
     jonathan = User(name='jonathan', admin=False)
     with user_set(app, jonathan):
-        with pytest.raises(Forbidden):
-            client.get('/articles')
+        resp = client.get('/articles')
+        assert 403 == resp.status_code
+
+def test_lock_it_down_without_debug():
+    # Flask propagates exceptions only in debug/testing mode, the status codes must also be right without
+    app = Flask("test_lock_it_down_without_debug")
+
+    # registered before Bouncer, its responses must be checked as well
+    @app.before_request
+    def early_response():
+        if request.args.get('early'):
+            return "early response"
+
+    bouncer = Bouncer(app, ensure_authorization=True)
+
+    @bouncer.authorization_method
+    def define_authorization(user, they):
+        they.can('browse', Article)
+
+    @app.route("/articles")
+    def articles_index():
+        return "A bunch of articles"
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return "custom forbidden", 403
+
+    # registered after Bouncer, its header must not get lost on the 403 response
+    @app.after_request
+    def add_cors_header(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    client = app.test_client()
+
+    jonathan = User(name='jonathan', admin=False)
+    with user_set(app, jonathan):
+        resp = client.get('/articles')
+        assert (403, b"custom forbidden") == (resp.status_code, resp.data)
+        assert '*' == resp.headers.get('Access-Control-Allow-Origin')
+        assert 403 == client.get('/articles?early=1').status_code
+        assert 404 == client.get('/unknown').status_code
 
 def test_ensure_and_requires_while_locked_down():
     app = Flask("test_ensure_and_requires_while_locked_down")

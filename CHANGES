@@ -1,3 +1,14 @@
+Unreleased
+----------
+
+- Adds `get_ability(user)`: builds the rules of a user only once per request, `clear_abilities()` resets it
+- `can`/`ensure` stop at the first matching rule instead of evaluating every condition
+- Fixes monitored flask-classy views on blueprints not being checked
+- Fixes `ensure_authorization` answering 500 instead of 403 (and 404 for unknown urls) outside debug mode
+- Fixes a globally registered `bouncer.authorization_method` being merged into the app's rules
+- Fixes `Bouncer.get_app()` without a bound app
+- `ensure` no longer puts the user and subject into the 403 description (it is sent to the client), they are logged at debug level
+
 Version 0.3.0
 -------------
 

@@ -1,3 +1,4 @@
+import logging
 from flask import Flask
 from flask_bouncer import Bouncer, ensure, can, requires
 from bouncer.constants import *
@@ -73,11 +74,15 @@ def test_not_allowed_index():
         resp = client.get('/topsecret')
         assert resp.status_code == 403
 
-def test_securing_specific_object():
+def test_securing_specific_object(caplog):
     doug = User(name='doug', admin=False)
     with user_set(app, doug):
-        resp = client.post('/article/1')
+        with caplog.at_level(logging.DEBUG, logger=app.logger.name):
+            resp = client.post('/article/1')
         assert resp.status_code == 403
+        # user and subject must not leak into the response, only into the log
+        assert b"Article" not in resp.data and b"User" not in resp.data
+        assert "does not have edit access to <test_flask_bouncer.models.Article" in caplog.text
 
 def test_no_custom_content_for_unauthorized_user():
     doug = User(name='doug', admin=False)
