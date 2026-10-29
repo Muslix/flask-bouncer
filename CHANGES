@@ -8,6 +8,9 @@ Unreleased
 - Fixes a globally registered `bouncer.authorization_method` being merged into the app's rules
 - Fixes `Bouncer.get_app()` without a bound app
 - `ensure` no longer puts the user and subject into the 403 description (it is sent to the client), they are logged at debug level
+- Conditional `can` rules no longer allow a class: `can(EDIT, Article)` was true as soon as any conditional EDIT rule
+  existed. Conditional `cannot` rules still forbid it. This also applies to the implicit checks of monitored
+  flask-classy views, which test the `__target_model__` class
 
 Version 0.3.0
 -------------

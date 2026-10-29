@@ -110,3 +110,30 @@ def test_stops_at_first_matching_condition():
 
     # later rules take precedence, the earlier one is not evaluated anymore
     assert ['last'] == calls
+
+def check(rules, action, subject):
+    app = Flask("class_subjects")
+    bouncer = Bouncer(app)
+    bouncer.authorization_method(lambda user, they: rules(they))
+    with app.test_request_context():
+        g.current_user = User(name='jonathan', admin=False)
+        return can(action, subject)
+
+def test_conditions_never_allow_a_class():
+    # a condition needs an object to decide on
+    assert not check(lambda they: they.can(EDIT, Article, lambda article: True), EDIT, Article)
+    assert not check(lambda they: they.can(EDIT, Article, author_id=1), EDIT, Article)
+    # an unconditional rule still allows the class ...
+    assert check(lambda they: (they.can(EDIT, Article), they.can(EDIT, Article, author_id=1)), EDIT, Article)
+    # ... and a conditional cannot rule still forbids it
+    assert not check(lambda they: (they.can(EDIT, Article), they.cannot(EDIT, Article, author_id=1)), EDIT, Article)
+
+def test_conditions_on_strings_are_evaluated():
+    calls = []
+
+    def condition(subject):
+        calls.append(subject)
+        return True
+
+    assert check(lambda they: they.can(EDIT, 'Article', condition), EDIT, 'Article')
+    assert ['Article'] == calls

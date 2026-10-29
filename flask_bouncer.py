@@ -17,10 +17,16 @@ _bouncer = LocalProxy(lambda: current_app.extensions['bouncer'])
 class _Ability(Ability):
 
     def can(self, action, subject):
-        # same result as Ability.can, but stops at the first matching rule instead of
-        # evaluating every condition (conditions may run database queries)
-        return next((rule.base_behavior for rule in self.relevant_rules_for_match(action, subject)
-                     if rule.matches_conditions(action, subject)), False)
+        # unlike Ability.can, stops at the first matching rule instead of evaluating every condition
+        # (conditions may run database queries)
+        for rule in self.relevant_rules_for_match(action, subject):
+            # a condition needs an object to decide on (bouncer treats it as fulfilled for a class):
+            # a conditional rule may still forbid a class, but never allow it
+            if rule.base_behavior and rule.conditions is not None and inspect.isclass(subject):
+                continue
+            if rule.matches_conditions(action, subject):
+                return rule.base_behavior
+        return False
 
 
 def get_ability(user):
